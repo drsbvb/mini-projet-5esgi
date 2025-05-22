@@ -1,0 +1,13 @@
+{
+    "Servers": {
+      "1": {
+        "Name": "Odoo DB",
+        "Group": "IC Group",
+        "Port": 5432,
+        "Username": "postgres",
+        "Host": "postgresql-service",
+        "SSLMode": "prefer",
+        "MaintenanceDB": "postgres"
+      }
+    }
+  }
