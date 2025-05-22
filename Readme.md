@@ -187,7 +187,7 @@ Odoo est bien joignable, on accède bien à son interface web ! On va pouvoir cr
 
 On peut effectuer la même procédure pour pgAdmin :
 ```bash
-http://192.168.59.100):30091
+http://192.168.59.100:30091
 ```
 
 ![build](images/17.png)
