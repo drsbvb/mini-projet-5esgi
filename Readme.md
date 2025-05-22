@@ -1,111 +1,192 @@
-﻿# PROJET DEVOPS - Orchestration. 
+# mini-projet-5esgi : Déploiement des application de IC Group
 
-## **1) Introduction**
+### Objectifs
+Ce projet a pour objectifs de conteneuriser, configurer et déployer les applications du IC Group dans un cluster Kubernetes tout en assurant la persistance des données des différentes ressources.
 
-La société **IC GROUP** dans laquelle vous travaillez en tant qu’ingénieur Devops souhaite mettre sur pied un site web vitrine devant permettre d’accéder à ses 02 applications phares qui sont :  
+- Odoo 13.0 : ERP open source
+- gAdmin 4 : Interface Web d'administration pour PostgreSQL
+- Application web développer avec Flask permettant l'accès aux deux services ci-dessus.
 
-1) Odoo et 
-1) pgAdmin 
+### Prérequis 
+- Un cluster Kubernetes fonctionnel
+- kubectl installé et configuré
+- Docker installé pour build et push les images
+- Accès à Docker Hub
+- Git
 
-**Odoo**, un ERP multi usage qui permet de gérer les ventes, les achats, la comptabilité, l’inventaire, le personnel …  
+## Architecture
+L’architecture déployée repose sur trois composants principaux, chacun dans un conteneur Kubernetes au sein du namespace icgroup. Le premier est PostgreSQL, qui sert de base de données relationnelle pour stocker toutes les données métiers. Il est exposé en interne via un Service Kubernetes nommé postgresql-service, ce qui permet à d'autres pods du namespace d'y accéder via le DNS interne. Le second composant est Odoo, une application web de gestion d'entreprise, qui se connecte à PostgreSQL pour lire et écrire des données ; son déploiement inclut un volume persistant pour conserver les fichiers entre les redémarrages, et il est exposé à l’extérieur via un NodePort (port 30090). Enfin, pgAdmin est un outil d’administration de PostgreSQL déployé pour permettre aux développeurs ou administrateurs de visualiser et gérer la base de données via une interface web (sur le port 30091). Chaque composant a un volume dédié pour la persistance, et les accès sont sécurisés via des utilisateurs distincts dans PostgreSQL.
 
-Odoo est distribué en version communautaire et Enterprise. ICGROUP souhaite avoir la main sur le code et apporter ses propres modifications et customisations ainsi elle a opté pour l’édition communautaire.  Plusieurs versions de Odoo sont disponibles et celle retenue est la 13.0 car elle intègre un système de LMS (Learning Management System) qui sera utilisé pour publier les formations en internes et ainsi diffuser plus facilement l’information.  
+### Clonage du dépôt
+```bash
+git clone https://github.com/OlivierKouokam/mini-projet-5esgi.git
+cd ic-webapp
+```
 
-Liens utiles : 
+## Deploiement de ic-webapp avec Docker
 
-- Site officiel :[ https://www.odoo.com/ ](https://www.odoo.com/) 
-- GitHub officiel:[ https://github.com/odoo/odoo.git ](https://github.com/odoo/odoo.git) 
-- Docker Hub officiel :[ https://hub.docker.com/_/odoo ](https://hub.docker.com/_/odoo) 
+### Création d'un DockerFile
+```bash
+# Image de base
+FROM python:3.6-alpine
 
-**pgAdmin** quant à elle devra être utilisée pour administrer de façon graphique la base de données PostgreSQL crée précédemment. 
+# Définit le répertoire de travail
+WORKDIR /opt
 
-- Site officiel :[ https://www.pgadmin.org/ ](https://www.pgadmin.org/) 
-- Docker Hub officiel:[ https://hub.docker.com/r/dpage/pgadmin4/ ](https://hub.docker.com/r/dpage/pgadmin4/) 
+# Copie les fichiers de l’application dans l’image
+COPY . .
 
-Le site web vitrine a été conçu par l’équipe de développeurs de l’entreprise et les fichiers y relatifs se trouvent dans le repo suscité : [ https://github.com/OlivierKouokam/mini-projet-5esgi.git ](https://github.com/OlivierKouokam/mini-projet-5esgi.git) . Il est de votre responsabilité de conteneuriser cette application tout en permettant la saisie des différentes URL des applications (Odoo et pgadmin) par le biais des variables d’environnement. 
+# Installe Flask version 1.1.2
+RUN pip install flask==1.1.2
 
-Ci-dessous un aperçu du site vitrine attendu. 
+# Expose le port 8080
+EXPOSE 8080
 
-![](images/site_vitrine.jpeg)
+# Définit les variables d’environnement
+ENV ODOO_URL="https://www.odoo.com"
+ENV PGADMIN_URL="https://www.pgadmin.org"
 
-**NB :** L’image** créée devra permettre de lancer un container permettant d’héberger ce site web et ayant les liens adéquats permettant d’accéder à nos applications internes 
+# Lance l’application
+ENTRYPOINT ["python", "app.py"]
+```
+### Test du DockerFile
+Pour commencer, il faut build l'image qu'on a crée avec notre Dockerfile avec la commande :
+```bash
+docker build -t ic-webapp:1.0
+```
+x
+
+On peut vérifier que l'image s'est correctement build avec la commande :
+```bash
+docker image ls
+```
+x
+Puis lancer la création de l'application conteneurisée :
+```bash
+docker run -d --name test-ic-webapp -p 8080:8080 -e ODOO_URL="https://www.odoo.com" -e PGADMIN_URL="https://www.pgmain.org" ic-webapp:1.0
+```
+Pour vérifier que le conteneur s'est bien créé, on utilise la commande docker suivante :
+```bash
+docker ps -a
+```
+x
+On peut voir que le conteneur est bien en running, on va pouvoir tenter d'accéder à sa page web afin de vérifier son bon fonctionnement.
+```bash
+http://172.180.0.29:8080
+```
+x
+On peut essayer d'accéder la page odoo :
+x
+Notre image est bien fonctionnelle, on va pouvoir créer un tag et push l'image vers notre compte Docker Hub :
+```bash
+docker login
+docker tag ic-webapp:1.0 kbysh01/ic-webapp:1.0
+docker push kbysh01/ic-webapp:1.0
+```
+x
+On peut vérifier que le push a bien été effectué en accédant directement à l'interface DockerHub :
+x
+On peut ensuite stopper et supprimer le conteneur de test avec les commandes docker suivantes :
+```bash
+docker stop <container id>
+docker rm <container id>
+```
+x
+
+## Déploiement des ressources Kubernetes
+
+Voici les fichiers manifests utilisés dans cette partie :
+x
+### Deploiement de l'application web
+```bash
+## Création d'un namespace pour isoler nos ressources
+kubectl create ns icgroup 
+  
+## Déploiement de l'apprlication web (Deployment et Service)
+kubectl apply -f ic-webapp-deployment -n icgroup  
+kubectl apply -f ic-webapp-service -n icgroup
+```
+
+### Deploiement de PostgreSQL
+```bash
+## Déploiement de l'application web (persitentVolume, Deployment, Service)
+kubectl apply -f postgresql.yaml -n icgroup
+```
+On va se connecter à notre base de données afin de créer l'utilisateur utiliser par odoo :
+```bash
+kubectl exec -it <pod name> -n icgroup -- bash
+psql -U postgres
+CREATE USER odoo WITH PASSWORD <password>;  
+ALTER USER odoo CREATEDB;
+```
+x
+x
+Ainsi, nous avons pu créer l'utilisateur Odoo et l'autoriser à créer une nouvelle base de données.
+
+### Deploiement de Odoo
+```bash
+## Déploiement de Odoo (persitentVolume, Deployment, Service)
+kubectl apply -f odoo.yaml -n icgroup
+```
+
+### Deploiement de pgAdmin
+```bash
+## Déploiement de pgAdmin (persitentVolume, Deployment, Service et configmap)
+kubectl apply -f pgadmin.yaml -n icgroup
+```
+### Vérification de l'ensemble des ressources
+```bash
+kubectl get all -n icgroup
+```
+x
+On retrouve bien toutes nos ressources créées et utilisées par notre application !
+```bash
+kubectl get cm -n icgroup
+```
+x
+Ainsi que notre configMap !
+```bash
+kubectl get cm -n icgroup
+```
+x
+Et nos volumes !
+
+## Vérification du fonctionnement de l'application
+
+On peut tenter d'accéder à l'interface web de notre Odoo depuis notre navigateur :
+```bash
+http://172.180.0.29:30090
+```
+Odoo est bien joignable, on accède bien à son interface web ! On va pouvoir créer une nouvelle base de donnée :
+x
+x
+On peut effectuer la même procédure pour pgAdmin :
+```bash
+http://172.180.0.29:30091
+```
+x
+pgAdmin est bien joignable, on accède bien à son interface web ! On va pouvoir essayer de se connecter à notre base de donnée :
+x
+Nous sommes à présent connecté à notre base de donnée postgresql ! A présent, on va essayer de se connecter à notre base de donnée odoo avec le mot de passe que nous avons créer :
+x
+x
+Nous sommes bien authentifié et connecté à Odoo !
+
+A présent, nous allons voir si on arrive à joindre Odoo et pgAdmin depuis notre interface web "ic-webapp" :
+```bash
+http://172.180.0.29:30001
+```
+Voici l'interface web avec nos deux outils de disponibles accessible cette voici depuis le port 30001 :
+x
+On peut tenter de joindre Odoo et se connecter avec les identifiants renseignés dans notre fichier manifest :
+x
+On se retrouve sur le menu d'Odoo !
+
+On peut à présent retourner sur notre page web et tenter de joindre pgadmin depuis celle ci :
+x
+Une fois connecté, on retombe bien sur la page suivante : 
+x
+Tout est fonctionnelle ! Notre application est prête à être utilisée.
 
 
-## **2) Conteneurisation de l’application web.** 
 
-Il s’agit en effet d’une application web python utilisant le module Flask. Les étapes à suivre pour la conteneurisation de cette application sont les suivantes : 
-
-1) Image de base : `python:3.6-alpine`
-2) Définir le répertoire `/opt` comme répertoire de travail 
-3) Installer le module Flask version 1.1.2 à l’aide de `pip install flask==1.1.2`
-4) Exposer le port `8080` qui est celui utilisé par défaut par l'application
-5) Créer les variables d’environnement `ODOO_URL` et `PGADMIN_URL` afin de permettre la définition de ces url lors du lancement du container 
-6) Lancer l’application `app.py` dans le `ENTRYPOINT` grâce à la commande `python`  
-
-Une fois le Dockerfile crée, Buildez le et lancer un container test permettant d’aller sur les sites web officiels de chacune de ces applications (site web officiels fournis ci-dessus). 
-
-**Nom de l’image :**  ic-webapp ;*  
-**tag :** 1.0*  
-**container test_name :** test-ic-webapp* 
-
-Une fois le test terminé, supprimez ce container test et poussez votre image sur votre registre Docker hub. 
-
-## **3) Déploiement des différentes applications dans un cluster Kubernetes.** 
-
-### **a. Architecture** 
-
-Les applications ou services seront déployées dans un cluster Minikube, donc à un seul nœud et devront respecter l’architecture suivante. 
-
-![](images/synoptique_Kubernetes.jpeg)
-
-En vous basant sur cette architecture logicielle, bien vouloir identifier en donnant le type et le rôle de chacune des ressources (A…H)  mentionnées dans cette architecture. 
-
-
-
-### **b. Déploiement de l’application Odoo** 
-
-Comme décrite ci-dessus, Odoo est une application web de type 2 tier contenant différents modules facilitant la gestion administrative d’une société. 
-
-En Vous servant des différents liens mentionnés ci-dessus, déployer Odoo à l’aide des images docker correspondantes et assurez vous que les données de la base de données Odoo soit persistantes et sauvegardées dans un répertoire de votre choix sur votre hôte. **NB**: respectez l’architecture ci-dessus 
-
-
-
-### **c. Déploiement PgAdmin** 
-
-Comme ci-dessus, servez-vous de la documentation de déploiement de PgAdmin sous forme de container afin de déployer votre application. 
-
-Vous devez par la suite découvrir dans la documentation, le répertoire contenant les données et paramètres de l’application PgAdmin afin de le rendre persistant. 
-
-Notez également que PgAdmin est une application web d’administration des bases de données PostgreSQL, Toutefois, le déploiement d’un container PgAdmin ne nécessite pas obligatoirement la fourniture des paramètres de connexion à une BDD, donc vous pouvez initialement déployer l’interface web en fournissant le minimum de paramètres requis (adresse mail + mot de passe) et ce n’est que par la suite par le biais de l’interface graphique que vous initierez les différentes connexion à vos bases de données. 
-
-Afin de réduire le nombre de taches manuelles, nous souhaiterons qu’au démarrage de votre container PgAdmin, que ce dernier ait automatiquement les données nécessaires lui permettant de se connecter à votre BDD Odoo. Pour ce faire, il existe un fichier de configuration PgAdmin que vous devrez au préalable customiser et fournir par la suite à votre container sous forme de volume. 
-
-Ce fichier doit être situé au niveau du container dans le répertoire : /pgadmin4/servers.json 
-
-![](images/server_def.jpeg)
-
-
-### **d. Déploiement des différentes applications** 
-
-En vous servant des données ci-dessus, créez les différents manifests correspondants aux ressources nécessaires au bon fonctionnement de l’application tout en respectant l’architecture fournie (Nbre de réplicas et persistance de données). 
-
-Notez également que l’ensemble de ces ressources devront être crées dans un namespace particulier appelé «i*cgroup*» et devront obligatoirement avoir toutes au moins le label « *env = prod* » 
-
-**NB** : Etant donné que vos manifests pourront être publics (pousser vers un repo Git ), bien vouloir prendre les mesures nécessaires afin d’utiliser les ressources adéquates permettant de cacher vos informations sensibles. 
-
-
- ### **e. Test de fonctionnement et rapport final** 
-
-Lancez l’exécution de vos différents manifests afin de déployer les différents services ou applications demandés, testez le bon fonctionnement de vos différentes application et n’hésitez pas à prendre des captures d’écran le plus possible afin de consolider votre travail dans un rapport final qui présentera dans les moindre détails ce que vous avez fait. 
-
- ## **4) ANNEXE** 
-
-Ci-dessous un exemple de description des qualifications souhaitées pour un poste de Devops 
-
-![](images/offre_emploi.jpeg)
-
-**NB** : Bien vouloir preter attention aux qualités encadrées en jaune ci-dessus, vous vous rendez compte en effet que maitriser les technologies seulement ne suffit pas, il faut en plus de ca avoir un esprit très créatif, de très bonnes capacités redactionnelles pour rediger vos différents rapports et également des qualités de pédagogue qui vous aideront à parfaire les explications de vos actions dans vos différents rapports afin de faciliter leur compréhension. 
-
-Compte tenu de tout cela, je vous invite tous à donner l’impotance à ce volet « rapport » de votre projet final, car c’est également une partie très importante qui devra pouvoir décrire le contenu de l’ensemble de votre travail.  
-
-Merci de le rédiger correctement avec les captures d’écran, commentaires et explications qui vont bien car cette partie sera prise en compte dans votre note finale.
