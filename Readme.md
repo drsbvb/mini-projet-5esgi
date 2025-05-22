@@ -20,7 +20,6 @@ L’architecture déployée repose sur trois composants principaux, chacun dans 
 ### Clonage du dépôt
 ```bash
 git clone https://github.com/drsbvb/mini-projet-5esgi.git
-cd ic-webapp
 ```
 
 ## Deploiement de ic-webapp avec Docker
