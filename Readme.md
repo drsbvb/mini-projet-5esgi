@@ -166,7 +166,7 @@ kubectl get cm -n icgroup
 
 Ainsi que notre configMap !
 ```bash
-kubectl get cm -n icgroup
+kubectl get pvc -n icgroup
 ```
 
 ![build](images/14.png)
