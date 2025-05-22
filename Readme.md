@@ -77,7 +77,7 @@ docker ps -a
 
 On peut voir que le conteneur est bien en running, on va pouvoir tenter d'accéder à sa page web afin de vérifier son bon fonctionnement.
 ```bash
-http://172.180.0.29:8080
+http://192.168.59.100:8080
 ```
 
 ![build](images/4.png)
