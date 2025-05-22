@@ -135,8 +135,11 @@ psql -U postgres
 CREATE USER odoo WITH PASSWORD <password>;  
 ALTER USER odoo CREATEDB;
 ```
-x
-x
+
+![build](images/10.png)
+
+![build](images/11.png)
+
 Ainsi, nous avons pu créer l'utilisateur Odoo et l'autoriser à créer une nouvelle base de données.
 
 ### Deploiement de Odoo
@@ -154,54 +157,63 @@ kubectl apply -f pgadmin.yaml -n icgroup
 ```bash
 kubectl get all -n icgroup
 ```
-x
+![build](images/12.png)
+
 On retrouve bien toutes nos ressources créées et utilisées par notre application !
 ```bash
 kubectl get cm -n icgroup
 ```
-x
+![build](images/13.png)
+
 Ainsi que notre configMap !
 ```bash
 kubectl get cm -n icgroup
 ```
-x
+
+![build](images/14.png)
+
 Et nos volumes !
 
 ## Vérification du fonctionnement de l'application
 
 On peut tenter d'accéder à l'interface web de notre Odoo depuis notre navigateur :
 ```bash
-http://172.180.0.29:30090
+http://192.168.59.100:30090
 ```
 Odoo est bien joignable, on accède bien à son interface web ! On va pouvoir créer une nouvelle base de donnée :
-x
-x
+
+![build](images/15.png)
+
+![build](images/16.png)
+
 On peut effectuer la même procédure pour pgAdmin :
 ```bash
-http://172.180.0.29:30091
+http://192.168.59.100):30091
 ```
-x
+
+![build](images/17.png)
+
 pgAdmin est bien joignable, on accède bien à son interface web ! On va pouvoir essayer de se connecter à notre base de donnée :
-x
+
+![build](images/18.png)
+
 Nous sommes à présent connecté à notre base de donnée postgresql ! A présent, on va essayer de se connecter à notre base de donnée odoo avec le mot de passe que nous avons créer :
-x
-x
+
+![build](images/19.png)
+
+![build](images/20.png)
+
 Nous sommes bien authentifié et connecté à Odoo !
 
 A présent, nous allons voir si on arrive à joindre Odoo et pgAdmin depuis notre interface web "ic-webapp" :
 ```bash
-http://172.180.0.29:30001
+http://192.168.59.100:30001
 ```
 Voici l'interface web avec nos deux outils de disponibles accessible cette voici depuis le port 30001 :
-x
-On peut tenter de joindre Odoo et se connecter avec les identifiants renseignés dans notre fichier manifest :
-x
-On se retrouve sur le menu d'Odoo !
 
-On peut à présent retourner sur notre page web et tenter de joindre pgadmin depuis celle ci :
-x
-Une fois connecté, on retombe bien sur la page suivante : 
-x
+![build](images/21.png)
+
+
 Tout est fonctionnelle ! Notre application est prête à être utilisée.
 
 
