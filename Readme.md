@@ -54,13 +54,17 @@ Pour commencer, il faut build l'image qu'on a crée avec notre Dockerfile avec l
 ```bash
 docker build -t ic-webapp:1.0
 ```
-x
+
+![build](image/1.png)
+
 
 On peut vérifier que l'image s'est correctement build avec la commande :
 ```bash
 docker image ls
 ```
-x
+
+![build](image/2.png)
+
 Puis lancer la création de l'application conteneurisée :
 ```bash
 docker run -d --name test-ic-webapp -p 8080:8080 -e ODOO_URL="https://www.odoo.com" -e PGADMIN_URL="https://www.pgmain.org" ic-webapp:1.0
@@ -69,34 +73,46 @@ Pour vérifier que le conteneur s'est bien créé, on utilise la commande docker
 ```bash
 docker ps -a
 ```
-x
+
+![build](image/3.png)
+
 On peut voir que le conteneur est bien en running, on va pouvoir tenter d'accéder à sa page web afin de vérifier son bon fonctionnement.
 ```bash
 http://172.180.0.29:8080
 ```
-x
+
+![build](image/4.png)
+
 On peut essayer d'accéder la page odoo :
-x
+
+![build](image/5.png)
+
 Notre image est bien fonctionnelle, on va pouvoir créer un tag et push l'image vers notre compte Docker Hub :
 ```bash
 docker login
 docker tag ic-webapp:1.0 kbysh01/ic-webapp:1.0
 docker push kbysh01/ic-webapp:1.0
 ```
-x
+
+![build](image/6.png)
+
 On peut vérifier que le push a bien été effectué en accédant directement à l'interface DockerHub :
-x
+
+![build](image/7.png)
+
 On peut ensuite stopper et supprimer le conteneur de test avec les commandes docker suivantes :
 ```bash
 docker stop <container id>
 docker rm <container id>
 ```
-x
+![build](image/8.png)
 
 ## Déploiement des ressources Kubernetes
 
 Voici les fichiers manifests utilisés dans cette partie :
-x
+
+![build](image/9.png)
+
 ### Deploiement de l'application web
 ```bash
 ## Création d'un namespace pour isoler nos ressources
