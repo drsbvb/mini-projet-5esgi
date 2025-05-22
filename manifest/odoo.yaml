@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: odoo
+  namespace: icgroup
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: odoo
+  template:
+    metadata:
+      labels:
+        app: odoo
+    spec:
+      securityContext:
+        fsGroup: 1000
+      containers:
+        - name: odoo
+          image: odoo:15.0
+          securityContext:
+            runAsUser: 0
+          ports:
+            - containerPort: 8069
+          volumeMounts:
+            - mountPath: /var/lib/odoo
+              name: odoo-storage
+          env:
+            - name: HOST
+              value: postgresql-service
+            - name: USER
+              value: odoo
+            - name: PASSWORD
+              value: odoo
+      volumes:
+        - name: odoo-storage
+          persistentVolumeClaim:
+            claimName: odoo-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: odoo-pvc
+  namespace: icgroup
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: odoo-service
+  namespace: icgroup
+  labels:
+    app: odoo
+    env: prod
+spec:
+  selector:
+    app: odoo
+  type: NodePort
+  ports:
+    - port: 8069
+      targetPort: 8069
+      nodePort: 30090
